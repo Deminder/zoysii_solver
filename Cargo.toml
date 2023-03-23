@@ -1,0 +1,13 @@
+[package]
+name = "zoysii_solver"
+version = "0.1.0"
+edition = "2021"
+authors = ["Deminder <tremminder@gmail.com>"]
+description = "Solve a 4x4 Zoysii level with the lowest number of moves"
+homepage = "https://github.com/Deminder/zoysii_solver"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.1.11", features = ["derive"] }
+itertools = "0.10.5"
+
