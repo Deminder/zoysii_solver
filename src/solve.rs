@@ -1,61 +1,35 @@
-use crate::action::Action;
-use std::rc::Rc;
-use std::collections::HashSet;
+use crate::action::{Action, ActionSequence, ACTIONS};
 use crate::board::Board;
-
-#[derive(Clone, Debug)]
-struct ActionSequence {
-    prev: Option<Rc<ActionSequence>>,
-    action: Action,
-}
-
-impl From<&ActionSequence> for Vec<Action> {
-    fn from(value: &ActionSequence) -> Self {
-        let mut v = value.clone();
-        let mut actions = vec![v.action];
-        while let Some(z) = v.prev {
-            actions.push(z.action);
-            v = z.as_ref().clone();
-        }
-        actions.reverse();
-        actions
-    }
-}
+use std::collections::HashSet;
 
 struct SolveStep {
-    board: Box<Board>,
-    seq: Rc<ActionSequence>,
+    board: Board,
+    seq: ActionSequence,
 }
 
 impl SolveStep {
     pub fn next_steps(&self) -> Vec<SolveStep> {
-        [Action::UP, Action::DOWN, Action::LEFT, Action::RIGHT]
+        ACTIONS
             .into_iter()
             .filter_map(|action| {
-                self.board.action(action).map(|b| SolveStep {
-                    board: Box::new(b),
-                    seq: Rc::new(ActionSequence {
-                        prev: Some(Rc::clone(&self.seq)),
-                        action,
-                    }),
+                self.board.action(action).map(|board| SolveStep {
+                    board,
+                    seq: self.seq.add(action),
                 })
             })
             .collect()
     }
 }
 
-
 /**
 Perform a breadth-first search to find the shortest path of actions where `board.is_won()`.
 Besides pruning `board.is_lost()` this is a brute force search.
 */
-pub fn solve_board(board: &Board, max_moves: u8) -> Option<Vec<Action>> {
+pub fn solve_board(board: &Board, max_moves: usize) -> Option<Vec<Action>> {
+    assert!(max_moves <= ActionSequence::MAX_LENGTH);
     let mut steps = vec![SolveStep {
-        board: Box::new(*board),
-        seq: Rc::new(ActionSequence {
-            prev: None,
-            action: Action::START,
-        }),
+        board: *board,
+        seq: ActionSequence::new(),
     }];
     let mut moves_remaining = max_moves;
     let mut visited: HashSet<Board> = HashSet::new();
@@ -67,12 +41,10 @@ pub fn solve_board(board: &Board, max_moves: u8) -> Option<Vec<Action>> {
             .filter(|step| !visited.contains(&step.board) && !step.board.is_lost())
             .collect();
         if let Some(solution) = next_steps.iter().find(|step| step.board.is_won()) {
-            let sboard = Rc::clone(&solution.seq);
-            let actions: Vec<Action> = sboard.as_ref().into();
-            return Some(actions);
+            return Some(solution.seq.into());
         }
         for step in steps.iter() {
-            visited.insert(*step.board);
+            visited.insert(step.board);
         }
         steps = next_steps;
     }
