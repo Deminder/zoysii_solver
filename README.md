@@ -4,7 +4,7 @@ Solve a 4x4 Zoysii level with the lowest number of moves.
 Perform a breadth-first search to find the shortest path of actions where `board.is_won()`.
 For move $m$ this brute-force search considers $O(4^m)$ board states. However, the search is faster than this upper bound by pruning invalid moves, duplicates and `board.is_lost()`.
 
-
+For the two examples below, $(2.4 \pm 0.1)^m$ board states were considered.
 ## Run
 ```bash
 > cargo run -r "18 9 6 0|0 9 3 0|33 18 18 3|0 0 15 0"
