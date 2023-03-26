@@ -1,7 +1,9 @@
 use crate::action::{Action, ActionSequence, ACTIONS};
 use crate::board::Board;
+use rayon::prelude::*;
 use std::collections::HashSet;
 
+#[derive(Clone, Copy)]
 struct SolveStep {
     board: Board,
     seq: ActionSequence,
@@ -25,11 +27,13 @@ pub fn solve_board(board: &Board, max_moves: usize) -> Option<Vec<Action>> {
     while steps.len() > 0 && moves_remaining > 0 {
         moves_remaining -= 1;
         let mut next_steps: Vec<SolveStep> = Vec::with_capacity(steps.len() * ACTIONS.len());
-        next_steps.extend(
+        next_steps.par_extend(
             steps
-                .iter()
-                .flat_map(|step| {
-                    ACTIONS.into_iter().filter_map(|action| {
+                .par_chunks(10000)
+                .flatten()
+                .copied()
+                .flat_map_iter(|step| {
+                    ACTIONS.into_iter().filter_map(move |action| {
                         step.board.action(action).map(|board| SolveStep {
                             board,
                             seq: step.seq.add(action),

@@ -10,4 +10,5 @@ license = "MIT"
 [dependencies]
 clap = { version = "4.1.11", features = ["derive"] }
 itertools = "0.10.5"
+rayon = "1.7.0"
 
