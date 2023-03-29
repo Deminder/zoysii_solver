@@ -1,4 +1,4 @@
-use crate::values::{Point, N};
+use crate::values::{Point, Sym, Transform, N};
 use std::fmt;
 use std::mem;
 use std::ops;
@@ -12,6 +12,63 @@ pub enum Action {
 }
 
 pub const ACTIONS: [Action; 4] = [Action::UP, Action::DOWN, Action::LEFT, Action::RIGHT];
+
+impl Action {
+    pub fn reverse(&self) -> Action {
+        match self {
+            Action::UP => Action::DOWN,
+            Action::DOWN => Action::UP,
+            Action::LEFT => Action::RIGHT,
+            Action::RIGHT => Action::LEFT,
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        match self {
+            Action::UP => 0,
+            Action::DOWN => 1,
+            Action::LEFT => 2,
+            Action::RIGHT => 3,
+        }
+    }
+
+    pub fn transform(&self, t: Transform) -> Self {
+        match t {
+            Transform::Mirror => match self {
+                Action::UP => Action::DOWN,
+                Action::DOWN => Action::UP,
+                _ => *self,
+            },
+            Transform::Deg90 => match self {
+                Action::UP => Action::LEFT,
+                Action::LEFT => Action::DOWN,
+                Action::DOWN => Action::RIGHT,
+                Action::RIGHT => Action::UP,
+            },
+            Transform::Deg270 => match self {
+                Action::UP => Action::RIGHT,
+                Action::RIGHT => Action::DOWN,
+                Action::DOWN => Action::LEFT,
+                Action::LEFT => Action::UP,
+            },
+            Transform::Deg180 => self.reverse(),
+        }
+    }
+
+    pub fn reverse_symmetry(&self, sym: Sym) -> Self {
+        match sym.transform {
+            Transform::Mirror if sym.mirror => *self,
+            _ => {
+                let v = self.transform(sym.transform.reverse());
+                if sym.mirror {
+                    v.transform(Transform::Mirror)
+                } else {
+                    v
+                }
+            }
+        }
+    }
+}
 
 impl ops::Add<Action> for Point {
     type Output = Self;
@@ -38,13 +95,16 @@ impl ops::Add<Action> for Point {
 
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let name = match self {
-            Action::UP => "Up",
-            Action::DOWN => "Down",
-            Action::LEFT => "Left",
-            Action::RIGHT => "Right",
-        };
-        write!(f, "{name}")
+        write!(
+            f,
+            "{}",
+            match self {
+                Action::UP => "↑",
+                Action::DOWN => "↓",
+                Action::LEFT => "←",
+                Action::RIGHT => "→",
+            }
+        )
     }
 }
 
@@ -75,12 +135,7 @@ impl ActionSequence {
         );
         Self(
             self.0 ^ ((len ^ (len + 1)) as Seq)
-                | match action {
-                    Action::UP => 0,
-                    Action::DOWN => 1,
-                    Action::LEFT => 2,
-                    Action::RIGHT => 3,
-                } << (ACTION_BITS * len + LEN_BITS),
+                | (action.index() as u64) << (ACTION_BITS * len + LEN_BITS),
         )
     }
 

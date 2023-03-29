@@ -1,6 +1,7 @@
 mod action;
 mod board;
 mod solve;
+mod marks;
 mod values;
 
 use board::Board;

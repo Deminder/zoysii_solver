@@ -1,5 +1,6 @@
 use crate::action::Action;
-use crate::values::{CellNumber, Point, N};
+use crate::values::{CellNumber, Point, N, BoardLike};
+use crate::marks::MarkBoard;
 use itertools::Itertools;
 use std::cmp::{max, min};
 use std::fmt;
@@ -25,10 +26,13 @@ pub struct Board {
     cells: u128,
 }
 
-impl Board {
+impl BoardLike for Board {
     fn cell(&self, p: Point) -> CellNumber {
         (self.cells >> (p.index() * 8)) as u8
     }
+}
+
+impl Board  {
 
     fn set_cell(&mut self, p: Point, v: CellNumber) {
         self.cells ^= ((self.cell(p) ^ v) as u128) << (p.index() * 8)
@@ -70,6 +74,32 @@ impl Board {
         }
     }
 
+    pub fn zero_walk_endings(&self) -> Vec<Point> {
+        debug_assert!(self.at_zero());
+        MarkBoard::from(self).find_all_ends_for(self.pos).collect()
+    }
+
+    pub fn move_towards(&self, end: Point) -> Option<(Action, Self)> {
+        MarkBoard::from(self)
+            .action_towards(self.pos, end)
+            .map(|action| {
+                let next = Self {
+                    pos: self.pos + action,
+                    cells: self.cells,
+                };
+                debug_assert_eq!(next, self.action(action).unwrap());
+                (action, next)
+            })
+    }
+
+    pub fn at_point(&self, pos: Point) -> bool {
+        self.pos == pos
+    }
+
+    pub fn at_zero(&self) -> bool {
+        self.cell(self.pos) == 0
+    }
+
     fn row(&self, row: usize) -> u32 {
         (self.cells >> (row * N * 8)) as u32
     }
@@ -99,10 +129,7 @@ impl Board {
        The board is lost if it contains any dead cell.
     */
     pub fn is_lost(&self) -> bool {
-        (0..N)
-            .into_iter()
-            .flat_map(|r| (0..N).into_iter().map(move |c| Point::from(r, c)))
-            .any(|p| self.dead_cell(p))
+        Point::iter_all().any(|p| self.dead_cell(p))
     }
 
     pub fn is_won(&self) -> bool {
@@ -161,6 +188,7 @@ impl FromStr for Board {
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
